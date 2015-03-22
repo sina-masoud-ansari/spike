@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.cm as cm
 
-size = 35
+size = 25
 network = None
 cmap = 'binary'
 fig = plt.figure()
