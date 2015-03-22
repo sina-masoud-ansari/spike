@@ -19,6 +19,7 @@ class Neuron:
     # Neuron Type
     I = -1 # Inhibitory
     E = 1 # Excitatory
+    MIN_THRESHOLD = 0.001
 
     def __init__(self, network_name, id, type, threshold, weight_delta=0.001, decay_rate=0.001):
 
@@ -37,10 +38,7 @@ class Neuron:
         else:
             self.type = type
 
-        if not threshold > 0:
-            raise NeuronException("Neuron threshold must be > 0")
-        else:
-            self.threshold = threshold
+        self.threshold = max(Neuron.MIN_THRESHOLD, threshold)
 
         if not weight_delta > 0:
             raise NeuronException("Neuron weight_delta must be > 0")
