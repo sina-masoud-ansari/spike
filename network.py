@@ -9,7 +9,7 @@ import numpy as np
 # Todo: localised connections i.e probability based on distance
 
 class Network:
-    def __init__(self, name, size, density=0.3, ratio_inhibitory=0.3, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.1, init_random_values=False):
+    def __init__(self, name, size, density=0.1, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.1, init_random_values=False):
 
         if not name.strip():
             raise NetworkExcetption("Network name must have a least 1 non-whitespace character")
@@ -91,6 +91,12 @@ class Network:
         for i, n in enumerate(self.neurons):
             values[i] = n.value
         return values
+
+    def get_fired(self):
+        fired = np.zeros(self.size)
+        for i, n in enumerate(self.neurons):
+            fired[i] = int(n.fired)
+        return fired
 
     def __repr__(self):
         return "Network: size: {s}, density: {d}, ratio_inhib: {rh}, mean_thresh: {mnt}, stdev_thresh: {sdt}".format(s=self.size, rh=self.ratio_inhibitory, mnt=self.mean_threshold, sdt=self.stdev_threshold)

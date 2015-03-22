@@ -51,6 +51,7 @@ class Neuron:
             self.decay_rate = decay_rate
 
         self.value = 0
+        self.fired = False
         self.delta = 0
         self.upstream = {}
         self.downstream = []
@@ -85,12 +86,15 @@ class Neuron:
 
     def fire(self):
         if self.value > self.threshold:
+            self.fired = True
             for n in self.downstream:
                 if self.type == Neuron.E:
                     n.excite(self.id)
                 else:
                     n.inhibit(self.id)
-            self.current_value = 0
+            self.value = 0
+        else:
+            self.fired = False
         self.value = self.value - self.decay_rate
         self.update_weights()
 
