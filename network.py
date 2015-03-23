@@ -9,17 +9,22 @@ import numpy as np
 # Todo: localised connections i.e probability based on distance
 
 class Network:
-    def __init__(self, name, size, density=0.1, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.1, init_random_values=False):
+    # size is a tuple of length 3
+    def __init__(self, name, shape, density=1.0, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.1, init_random_values=False):
 
         if not name.strip():
             raise NetworkExcetption("Network name must have a least 1 non-whitespace character")
         else:
             self.name = name
 
-        if not isinstance(size, int) or size < 1:
-            raise NetworkExcetption("Network size must be a positive integer")
+        if len(shape) != 3:
+            raise NetworkExcetption("Network size must be a tuple of length 3")
+        for i in shape:
+            if not isinstance(i, int) or i < 1:
+                raise NetworkExcetption("Network size elements must be positive integers")
         else:
-            self.size = size
+            self.shape = shape
+            self.size = shape[0] * shape[1] * shape[2]
 
         if not isinstance(density, float) or not 0.0 < density <= 1.0:
             raise NetworkExcetption("Network density must a positive float <= 1.0 ")
@@ -51,15 +56,18 @@ class Network:
         else:
             self.stdev_weight = stdev_weight
 
-        self.neurons = []
+        self.neurons = np.empty(self.size, dtype=object)
         self.ids = itertools.count()
 
         self.create_neurons()
         self.connect_internal()
 
         if init_random_values:
-            for n in self.neurons:
-                n.value = np.random.ranf()
+            for i in range(self.shape[0]):
+                for j in range(self.shape[1]):
+                    for k in range(self.shape[2]):
+                        n = self.neurons[i][j][k]
+                        n.value = np.random.ranf()
 
     def create_neurons(self):
         for i in range(self.size):
@@ -71,31 +79,52 @@ class Network:
 
             threshold = abs(self.stdev_threshold * np.random.randn() + self.mean_threshold)
             neuron = Neuron(self.name, id, type, threshold)
-            self.neurons.append(neuron)
+            self.neurons[i] = neuron
+        self.neurons = np.reshape(self.neurons, self.shape)
 
     def connect_internal(self):
-        for nu in self.neurons:
-            for nd in self.neurons:
-                if nu != nd and np.random.ranf() < self.density:
-                    nu.add_downstream(nd)
-                    weight = abs(self.stdev_weight * np.random.randn() + self.mean_weight)
-                    nd.add_upstream(nu.id, weight)
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                for k in range(self.shape[2]):
+                    nu = self.neurons[i][j][k]
+                    nu_loc = np.asarray([i, j, k], dtype=np.float)
+                    for l in range(self.shape[0]):
+                        for m in range(self.shape[1]):
+                            for n in range(self.shape[2]):
+                                nd = self.neurons[l][m][n]
+                                nd_loc = np.asarray([l, m, n], dtype=np.float)
+                                distance = np.linalg.norm(nd_loc - nu_loc)
+                                if distance > 0:
+                                    fd = 1.0 / distance
+                                    if np.random.ranf() < self.density * fd:
+                                        nu.add_downstream(nd)
+                                        weight = abs(self.stdev_weight * np.random.randn() + self.mean_weight)
+                                        nd.add_upstream(nu.id, weight)
 
     def update(self):
-        for n in self.neurons:
-            n.integrate()
-            n.fire()
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                for k in range(self.shape[2]):
+                    n = self.neurons[i][j][k]
+                    n.integrate()
+                    n.fire()
 
     def get_values(self):
-        values = np.zeros(self.size)
-        for i, n in enumerate(self.neurons):
-            values[i] = n.value
+        values = np.zeros(self.shape)
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                for k in range(self.shape[2]):
+                    n = self.neurons[i][j][k]
+                    values[i][j][k] = n.value
         return values
 
     def get_fired(self):
-        fired = np.zeros(self.size)
-        for i, n in enumerate(self.neurons):
-            fired[i] = int(n.fired)
+        fired = np.zeros(self.shape)
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                for k in range(self.shape[2]):
+                    n = self.neurons[i][j][k]
+                    fired[i][j][k] = int(n.fired)
         return fired
 
     def __repr__(self):

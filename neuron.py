@@ -21,7 +21,7 @@ class Neuron:
     E = 1 # Excitatory
     MIN_THRESHOLD = 0.001
 
-    def __init__(self, network_name, id, type, threshold, weight_delta=0.001, decay_rate=0.001):
+    def __init__(self, network_name, id, type, threshold, weight_delta=0.01, decay_rate=0.01):
 
         if not network_name.strip():
             raise NeuronException("Neuron network_name must have a least 1 non-whitespace character")
@@ -95,7 +95,7 @@ class Neuron:
             self.value = 0
         else:
             self.fired = False
-        self.value = self.value - self.decay_rate
+        self.value = max(0, self.value - self.decay_rate)
         self.update_weights()
 
     def update_weights(self):

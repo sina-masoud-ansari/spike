@@ -5,11 +5,13 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.cm as cm
 
-size = 25
+
+shape = (14, 14, 1)
 network = None
 cmap = 'binary'
+cmap = 'hot'
 fig = plt.figure()
-im = plt.imshow(np.zeros((size, size)), cmap=cmap, interpolation='none')
+im = plt.imshow(np.zeros((shape[0], shape[1])), cmap=cmap, interpolation='none')
 plt.tick_params(axis='both',bottom='off',left='off', labelbottom='off',labelleft='off')
 
 
@@ -17,9 +19,10 @@ plt.tick_params(axis='both',bottom='off',left='off', labelbottom='off',labelleft
 def update(*args):
     global network
     network.update()
-    #values = network.get_values().reshape((size, size))
-    fired = network.get_fired().reshape((size, size))
+    values = network.get_values().reshape((shape[0], shape[1]))
+    fired = network.get_fired().reshape((shape[0], shape[1]))
     im.set_data(fired)
+    im.set_data(values)
     im.autoscale()
 
     return im
@@ -27,11 +30,9 @@ def update(*args):
 
 def main():
     global network
-    network = Network("Initial", size*size, density=0.3, init_random_values=True)
-    ani = animation.FuncAnimation(fig, update, interval=250)
+    network = Network("Initial", shape, density=1.0, init_random_values=True)
+    ani = animation.FuncAnimation(fig, update, interval=10)
     plt.show()
-
-
 
 if __name__ == "__main__":
     main()
