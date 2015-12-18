@@ -1,6 +1,8 @@
 # Neural network class
-import itertools
+
 from neuron import *
+from sensor import *
+from output import *
 import numpy as np
 
 # Todo: semantics to join networks
@@ -8,27 +10,18 @@ import numpy as np
 # Todo: clamp weights or redifne the way we do inhibitory and excitatory neurons
 
 class Network:
-    # size is a tuple of length 3
-    def __init__(self, name, shape, density=1.0, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.05, init_random_values=False):
 
-        if not name.strip():
-            raise NetworkExcetption("Network name must have a least 1 non-whitespace character")
-        else:
-            self.name = name
+    STDP_NEURON = 0
+    SENSOR_NEURON = 1
+    OUTPUT_NEURON = 2
 
-        if len(shape) != 3:
-            raise NetworkExcetption("Network size must be a tuple of length 3")
-        for i in shape:
-            if not isinstance(i, int) or i < 1:
-                raise NetworkExcetption("Network size elements must be positive integers")
-        else:
-            self.shape = shape
-            self.size = shape[0] * shape[1] * shape[2]
+    def __init__(self, type, shape, position, spacing, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.05, init_random_values=False):
 
-        if not isinstance(density, float) or not 0.0 < density <= 1.0:
-            raise NetworkExcetption("Network density must a positive float <= 1.0 ")
-        else:
-            self.density = density
+        self.type = type
+        self.position = position
+        self.spacing = spacing
+        self.shape = shape
+        self.size = shape[0] * shape[1] * shape[2]
 
         if ratio_inhibitory < 0:
             raise NetworkExcetption("Network ratio_inhibitory must be >= 0")
@@ -55,58 +48,78 @@ class Network:
         else:
             self.stdev_weight = stdev_weight
 
-        self.neurons = np.empty(self.size, dtype=object)
-        self.ids = itertools.count()
-
+        self.neurons = np.empty(self.shape, dtype=object)
         self.create_neurons()
-        self.connect_internal()
 
         if init_random_values:
-            for i in range(self.shape[0]):
-                for j in range(self.shape[1]):
-                    for k in range(self.shape[2]):
-                        n = self.neurons[i][j][k]
-                        n.value = np.random.ranf()
+            self.random_activation()
 
-    def create_neurons(self):
-        for i in range(self.size):
-            id = next(self.ids)
-            if np.random.ranf() < self.ratio_inhibitory:
-                type = Neuron.I
-            else:
-                type = Neuron.E
-
-            threshold = abs(self.stdev_threshold * np.random.randn() + self.mean_threshold)
-            neuron = Neuron(self.name, id, type, threshold)
-            self.neurons[i] = neuron
-        self.neurons = np.reshape(self.neurons, self.shape)
-
-    def connect_internal(self):
-        for i in range(self.shape[0]):
-            for j in range(self.shape[1]):
-                for k in range(self.shape[2]):
-                    nu = self.neurons[i][j][k]
-                    nu_loc = np.asarray([i, j, k], dtype=np.float)
-                    for l in range(self.shape[0]):
-                        for m in range(self.shape[1]):
-                            for n in range(self.shape[2]):
-                                nd = self.neurons[l][m][n]
-                                nd_loc = np.asarray([l, m, n], dtype=np.float)
-                                distance = np.linalg.norm(nd_loc - nu_loc)
-                                if distance > 0:
-                                    fd = 1.0 / distance
-                                    if np.random.ranf() < self.density * fd:
-                                        nu.add_downstream(nd)
-                                        weight = abs(self.stdev_weight * np.random.randn() + self.mean_weight)
-                                        nd.add_upstream(nu.id, weight)
-
-    def update(self):
+    def random_activation(self):
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
                 for k in range(self.shape[2]):
                     n = self.neurons[i][j][k]
-                    n.integrate()
-                    n.fire()
+                    n.value = np.random.ranf()
+
+
+    def create_neurons(self):
+        dx, dy, dz = self.spacing
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                for k in range(self.shape[2]):
+                    if np.random.ranf() < self.ratio_inhibitory:
+                        type = Neuron.I
+                    else:
+                        type = Neuron.E
+                    threshold = abs(self.stdev_threshold * np.random.randn() + self.mean_threshold)
+                    x, y, z = self.position
+                    position = (x + i * dx, y + j * dy, z + k * dz)
+                    if self.type == self.STDP_NEURON:
+                        self.neurons[i][j][k] = Neuron(type, threshold, position)
+                    elif self.type == self.SENSOR_NEURON:
+                        self.neurons[i][j][k] = Sensor(threshold, position)
+                    elif self.type == self.OUTPUT_NEURON:
+                        self.neurons[i][j][k] = Output(type, threshold, position)
+
+    def connect(self, other, density=0.05):
+        if not isinstance(density, float) or not 0.0 < density <= 1.0:
+            raise NetworkExcetption("Network connection density must a positive float <= 1.0 ")
+
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                for k in range(self.shape[2]):
+                    nu = self.neurons[i][j][k]
+                    nu_loc = np.asarray(nu.position, dtype=np.float)
+
+                    for l in range(other.shape[0]):
+                        for m in range(other.shape[1]):
+                            for n in range(other.shape[2]):
+                                nd = other.neurons[l][m][n]
+                                nd_loc = np.asarray(nd.position, dtype=np.float)
+                                distance = np.linalg.norm(nd_loc - nu_loc)
+                                if distance > 0:
+                                    fd = 1.0 / distance
+                                    if np.random.ranf() < density * fd:
+                                        nu.add_downstream(nd)
+                                        weight = abs(self.stdev_weight * np.random.randn() + self.mean_weight)
+                                        nd.add_upstream(nu, weight)
+
+    def update(self):
+        # fire all potential neurons
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                for k in range(self.shape[2]):
+                    n = self.neurons[i][j][k]
+                    n.integrate_and_fire()
+
+        if self.type in [self.STDP_NEURON, self.OUTPUT_NEURON]:
+            # update the weights
+            for i in range(self.shape[0]):
+                for j in range(self.shape[1]):
+                    for k in range(self.shape[2]):
+                        n = self.neurons[i][j][k]
+                        n.update_weights()
+
 
     def get_values(self):
         values = np.zeros(self.shape)
@@ -126,9 +139,17 @@ class Network:
                     fired[i][j][k] = int(n.fired)
         return fired
 
+    def apply_random_input(self, values):
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                for k in range(self.shape[2]):
+                    self.neurons[i][j][k].activate(values[i][j][k])
+
     def __repr__(self):
         return "Network: size: {s}, density: {d}, ratio_inhib: {rh}, mean_thresh: {mnt}, stdev_thresh: {sdt}".format(s=self.size, rh=self.ratio_inhibitory, mnt=self.mean_threshold, sdt=self.stdev_threshold)
 
 
+
 class NetworkExcetption(Exception):
     pass
+

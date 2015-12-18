@@ -1,5 +1,5 @@
 
-class Neuron:
+class Output:
 
     # Neuron Type
     I = -1.0 # Inhibitory
@@ -9,7 +9,7 @@ class Neuron:
     def __init__(self, type, threshold, position, weight_delta=0.01, decay_rate=0.01):
 
         self.type = type;
-        self.threshold = max(Neuron.MIN_THRESHOLD, threshold)
+        self.threshold = max(Output.MIN_THRESHOLD, threshold)
         self.position = position # tuple (x, y, z)
         self.weight_delta = weight_delta
         self.decay_rate = decay_rate
@@ -26,9 +26,6 @@ class Neuron:
 
     def add_downstream(self, neuron):
         self.downstream.append(neuron)
-
-    def activate_directly(self, value):
-        self.delta = self.delta + value
 
     def activate(self, actor, type):
         weight = self.upstream[actor]
@@ -57,5 +54,6 @@ class Neuron:
                 weight = max(1e-6, weight - self.weight_delta)
             self.upstream[neuron] = weight
         self.actors = []
+
 
 
