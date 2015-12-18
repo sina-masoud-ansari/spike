@@ -5,12 +5,11 @@ import numpy as np
 
 # Todo: semantics to join networks
 # Todo: ability to define distribution for neuron weight_delta and decay rate
-# Todo: add structure (1D, 2D, 3D)
-# Todo: localised connections i.e probability based on distance
+# Todo: clamp weights or redifne the way we do inhibitory and excitatory neurons
 
 class Network:
     # size is a tuple of length 3
-    def __init__(self, name, shape, density=1.0, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.1, init_random_values=False):
+    def __init__(self, name, shape, density=1.0, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.05, init_random_values=False):
 
         if not name.strip():
             raise NetworkExcetption("Network name must have a least 1 non-whitespace character")

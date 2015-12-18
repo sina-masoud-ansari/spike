@@ -83,6 +83,7 @@ class Neuron:
     def integrate(self):
         self.value = self.value + self.delta
         self.delta = 0
+        self.actors = []
 
     def fire(self):
         if self.value > self.threshold:
