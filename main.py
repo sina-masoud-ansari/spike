@@ -46,7 +46,7 @@ def main():
     sensor_network_offset_z = 0
     sensor_network_position = tuple(map(operator.add, main_network_position, (sensor_network_offset_x, sensor_network_offset_y, sensor_network_offset_z)))
     sensor_network_spacing = (0.1, 0.1, 0.1)
-    sensor_network = Network(Network.SENSOR_NEURON, sensor_network_shape, sensor_network_position, sensor_network_spacing, init_random_values=False)
+    sensor_network = Network(Network.SENSOR_NEURON, sensor_network_shape, sensor_network_position, sensor_network_spacing, init_random_values=True)
     sensor_network.connect(main_network, density=0.02)
     
     # init output neuron network
@@ -58,7 +58,7 @@ def main():
     output_network_offset_z = 0
     output_network_position = tuple(map(operator.add, main_network_position, (output_network_offset_x, output_network_offset_y, output_network_offset_z)))
     output_network_spacing = (0.1, 0.1, 0.1)
-    output_network = Network(Network.OUTPUT_NEURON, output_network_shape, output_network_position, output_network_spacing, init_random_values=False, ratio_inhibitory=0)
+    output_network = Network(Network.OUTPUT_NEURON, output_network_shape, output_network_position, output_network_spacing, init_random_values=True, ratio_inhibitory=0)
     output_network.connect(main_network, density=0.02)
     main_network.connect(output_network, density=0.02)
 
