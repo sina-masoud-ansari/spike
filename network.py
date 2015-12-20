@@ -103,13 +103,15 @@ class Network:
                     position = (x + i * dx, y + j * dy, z + k * dz)
                     if self.type == self.STDP_NEURON:
                         p = 1.0
-                        # weight association
-                        wad_mean, wad_stdev = self.max_weight_association_delta
-                        wad = (wad_mean * p, wad_stdev * p)
                         if self.memory_gradient:
                             distance = np.linalg.norm(self.network_center - position)
-                            p = 1.0 - self.exp_pdf(distance) + 1e-3
-                        # weight decay
+                            #p = 1.0 - self.exp_pdf(distance) + 1e-6
+                            p = 1.0 - 1.0 / (distance * distance + 1e-6)
+                            p = min(1.0, p)
+                        # weight association - outer nodes are more adaptive
+                        wad_mean, wad_stdev = self.max_weight_association_delta
+                        wad = (wad_mean * p, wad_stdev * p)
+                        # weight decay - inner nodes preserve patterns for longer
                         wdd_mean, wdd_stdev = self.max_weight_decay_delta
                         wdd = (wdd_mean * p, wdd_stdev * p)
                         self.neurons[i][j][k] = Neuron(type, threshold, position, weight_association_delta=wad, weight_decay_delta=wdd)
@@ -134,7 +136,9 @@ class Network:
                                 nd = other.neurons[l][m][n]
                                 nd_loc = np.asarray(nd.position, dtype=np.float)
                                 distance = np.linalg.norm(nd_loc - nu_loc)
-                                p = self.exp_pdf(distance) * density
+                                #p = self.exp_pdf(distance) * density
+                                p = density / (distance * distance + 1e-3)
+                                p = min(1.0, p)
                                 if np.random.ranf() < p:
                                     nu.add_downstream(nd)
                                     weight = abs(self.stdev_weight * np.random.randn() + self.mean_weight)
