@@ -6,12 +6,13 @@ class Output:
     E = 1.0 # Excitatory
     MIN_THRESHOLD = 0.001
 
-    def __init__(self, type, threshold, position, weight_delta=0.01, decay_rate=0.01):
+    def __init__(self, type, threshold, position, weight_association_delta=0.005, weight_decay_delta=0.001, decay_rate=0.01):
 
         self.type = type;
         self.threshold = max(Output.MIN_THRESHOLD, threshold)
         self.position = position # tuple (x, y, z)
-        self.weight_delta = weight_delta
+        self.weight_association_delta = weight_association_delta
+        self.weight_decay_delta = weight_decay_delta
         self.decay_rate = decay_rate
 
         self.value = 0
@@ -34,13 +35,12 @@ class Output:
 
     def integrate_and_fire(self):
         self.value = self.value + self.delta
+        self.fired = False
         if self.value > self.threshold:
             for n in self.downstream:
                 n.activate(self, self.type)
             self.value = 0
             self.fired = True
-        else:
-            self.fired = False
         self.value = max(0, self.value - self.decay_rate)
         self.delta = 0
 
@@ -49,9 +49,9 @@ class Output:
         for neuron in self.upstream:
             weight = self.upstream[neuron]
             if neuron in self.actors:
-                weight = min(1.0, weight + self.weight_delta)
+                weight = min(1.0, weight + self.weight_association_delta)
             else:
-                weight = max(1e-6, weight - self.weight_delta)
+                weight = max(1e-6, weight - self.weight_decay_delta)
             self.upstream[neuron] = weight
         self.actors = []
 

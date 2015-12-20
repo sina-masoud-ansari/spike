@@ -13,7 +13,7 @@ class Network:
 
     STDP_NEURON = 0
     SENSOR_NEURON = 1
-    OUTPUT_NEURON = 2
+    #OUTPUT_NEURON = 2
 
     def __init__(self, type, shape, position, spacing, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.05, init_random_values=False):
 
@@ -78,8 +78,8 @@ class Network:
                         self.neurons[i][j][k] = Neuron(type, threshold, position)
                     elif self.type == self.SENSOR_NEURON:
                         self.neurons[i][j][k] = Sensor(threshold, position)
-                    elif self.type == self.OUTPUT_NEURON:
-                        self.neurons[i][j][k] = Output(type, threshold, position)
+                    #elif self.type == self.OUTPUT_NEURON:
+                    #    self.neurons[i][j][k] = Output(type, threshold, position)
 
     def connect(self, other, density=0.05):
         if not isinstance(density, float) or not 0.0 < density <= 1.0:
@@ -112,7 +112,7 @@ class Network:
                     n = self.neurons[i][j][k]
                     n.integrate_and_fire()
 
-        if self.type in [self.STDP_NEURON, self.OUTPUT_NEURON]:
+        if self.type in [self.STDP_NEURON]:
             # update the weights
             for i in range(self.shape[0]):
                 for j in range(self.shape[1]):
@@ -127,7 +127,7 @@ class Network:
             for j in range(self.shape[1]):
                 for k in range(self.shape[2]):
                     n = self.neurons[i][j][k]
-                    values[i][j][k] = n.value
+                    values[i][j][k] = n.value / n.threshold
         return values
 
     def get_fired(self):

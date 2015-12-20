@@ -19,23 +19,50 @@ def update(frame, inputs, main, outputs):
 
     network = main[0]
     points = main[1]
+    lines = main[2]
     network.update()
     points.set_array(network.get_values().flatten())
+    flat = network.neurons.flatten()
+    index = 0
+    for n in flat:
+        nx, ny, nz = n.position
+        for u, w in n.upstream.iteritems():
+            ux, uy, uz = u.position
+            lines[index].set_data([nx, ux], [ny, uy])
+            lines[index].set_3d_properties([nz, uz])
+            lines[index].set_alpha(w)
+            lines[index].set_color('k')
+            if u.fired:
+                lines[index].set_color('c')
+            index = index + 1
+
 
     network = outputs[0]
     points = outputs[1]
+    lines = outputs[2]
     network.update()
     points.set_array(network.get_values().flatten())
-
+    flat = network.neurons.flatten()
+    index = 0
+    for n in flat:
+        nx, ny, nz = n.position
+        for u, w in n.upstream.iteritems():
+            ux, uy, uz = u.position
+            lines[index].set_data([nx, ux], [ny, uy])
+            lines[index].set_3d_properties([nz, uz])
+            lines[index].set_alpha(w)
+            if u.fired:
+                lines[index].set_color('c')
+            index = index + 1
 
 def main():
 
     # init main network
-    main_network_shape = (5, 5, 5)
+    main_network_shape = (3, 6, 3)
     main_network_position = (0, 0, 0)
     main_network_spacing = (0.1, 0.1, 0.1)
     main_network = Network(Network.STDP_NEURON, main_network_shape, main_network_position, main_network_spacing, init_random_values=True)
-    main_network.connect(main_network, density=0.02)
+    main_network.connect(main_network, density=0.03)
 
     # init input sensor network
     sensor_network_shape = (1, 1, 1)
@@ -58,7 +85,7 @@ def main():
     output_network_offset_z = 0
     output_network_position = tuple(map(operator.add, main_network_position, (output_network_offset_x, output_network_offset_y, output_network_offset_z)))
     output_network_spacing = (0.1, 0.1, 0.1)
-    output_network = Network(Network.OUTPUT_NEURON, output_network_shape, output_network_position, output_network_spacing, init_random_values=True, ratio_inhibitory=0)
+    output_network = Network(Network.STDP_NEURON, output_network_shape, output_network_position, output_network_spacing, init_random_values=True, ratio_inhibitory=0)
     output_network.connect(main_network, density=0.02)
     main_network.connect(output_network, density=0.02)
 
@@ -84,15 +111,16 @@ def main():
     output_network_z = [n.position[2] for n in output_network_flat]
 
 
-    # show random main_network connections
+    # show  main_network connections
     flat = main_network.neurons.flatten()
-    index = np.random.randint(len(flat))
-    n = flat[index]
-    nx, ny, nz = n.position
-    for u, w in n.upstream.iteritems():
-        ux, uy, uz = u.position
-        network_view.plot([nx, ux], [ny, uy], [nz, uz], color='black')
+    main_network_lines = []
+    for n in flat:
+        nx, ny, nz = n.position
+        for u, w in n.upstream.iteritems():
+            ux, uy, uz = u.position
+            main_network_lines = main_network_lines + network_view.plot([nx, ux], [ny, uy], [nz, uz], color='black', alpha=w)
 
+    """
     # show random sensor_network connections
     flat = sensor_network.neurons.flatten()
     index = np.random.randint(len(flat))
@@ -101,16 +129,16 @@ def main():
     for d in n.downstream:
         dx, dy, dz = d.position
         network_view.plot([nx, dx], [ny, dy], [nz, dz], color='red')
+    """
 
-
-     # show random output network connections
+     # show output network connections
     flat = output_network.neurons.flatten()
-    index = np.random.randint(len(flat))
-    n = flat[index]
-    nx, ny, nz = n.position
-    for u, w in n.upstream.iteritems():
-        ux, uy, uz = u.position
-        network_view.plot([nx, ux], [ny, uy], [nz, uz], color='blue')
+    output_network_lines = []
+    for n in flat:
+        nx, ny, nz = n.position
+        for u, w in n.upstream.iteritems():
+            ux, uy, uz = u.position
+            output_network_lines = output_network_lines + network_view.plot([nx, ux], [ny, uy], [nz, uz], color='blue', alpha=w)
 
 
     main_network_points = network_view.scatter(main_network_x, main_network_y, main_network_z, s=scatter_marker_size, depthshade=True, cmap=cm.hot, vmin=0, vmax=1.0, marker='o', c=main_network.get_values().flatten())
@@ -122,8 +150,8 @@ def main():
     network_view.set_zlabel('Z')
 
     inputs = [sensor_network, sensor_network_points]
-    main = [main_network, main_network_points]
-    outputs = [output_network, output_network_points]
+    main = [main_network, main_network_points, main_network_lines]
+    outputs = [output_network, output_network_points, output_network_lines]
     ani = animation.FuncAnimation(fig, update, fargs=(inputs, main, outputs), interval=0)
     plt.show()
 

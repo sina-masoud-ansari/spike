@@ -26,13 +26,12 @@ class Sensor:
 
     def integrate_and_fire(self):
         self.value = self.value + self.delta
+        self.fired = False
         if self.value > self.threshold:
             for n in self.downstream:
                 n.activate(self, Neuron.E)
             self.value = 0
             self.fired = True
-        else:
-            self.fired = False
         self.value = max(0, self.value - self.decay_rate)
         self.delta = 0
 
