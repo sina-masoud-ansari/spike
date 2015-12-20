@@ -15,7 +15,7 @@ class Network:
     SENSOR_NEURON = 1
     #OUTPUT_NEURON = 2
 
-    def __init__(self, type, shape, position, spacing, memory_gradient=False, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.05, max_weight_association_delta=(0.01, 0.01), max_weight_decay_delta=(0.04, 0.02), init_random_values=False):
+    def __init__(self, type, shape, position, spacing, memory_gradient=False, ratio_inhibitory=0.5, threshold=(0.5, 0.5), max_weight_association_delta=(0.01, 0.01), max_weight_decay_delta=(0.04, 0.02), init_random_values=False):
 
         self.type = type
         self.position = position
@@ -41,25 +41,10 @@ class Network:
         else:
             self.ratio_inhibitory = ratio_inhibitory
 
-        if not mean_threshold > 0:
-            raise NetworkExcetption("Network mean_threshold must be > 0")
+        if not threshold[0] > 0 and threshold[1] > 0:
+            raise NetworkExcetption("Network threshold mean and stdev must be > 0")
         else:
-            self.mean_threshold = mean_threshold
-
-        if stdev_threshold < 0:
-            raise NetworkExcetption("Network stdev_threshold must be >= 0")
-        else:
-            self.stdev_threshold = stdev_threshold
-
-        if not mean_weight > 0:
-            raise NetworkExcetption("Network mean_weight must be > 0")
-        else:
-            self.mean_weight = mean_weight
-
-        if stdev_weight < 0:
-            raise NetworkExcetption("Network stdev_weight must be >= 0")
-        else:
-            self.stdev_weight = stdev_weight
+            self.threshold = threshold
 
         self.neurons = np.empty(self.shape, dtype=object)
         self.create_neurons()
@@ -91,6 +76,7 @@ class Network:
     def create_neurons(self):
         x, y, z = self.position
         dx, dy, dz = self.spacing
+        mean_threshold, stdev_threshold = self.threshold
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
                 for k in range(self.shape[2]):
@@ -98,8 +84,7 @@ class Network:
                         type = Neuron.I
                     else:
                         type = Neuron.E
-                    threshold = abs(self.stdev_threshold * np.random.randn() + self.mean_threshold)
-
+                    threshold = abs(mean_threshold * np.random.randn() + stdev_threshold)
                     position = (x + i * dx, y + j * dy, z + k * dz)
                     if self.type == self.STDP_NEURON:
                         p = 1.0
@@ -120,10 +105,14 @@ class Network:
                     #elif self.type == self.OUTPUT_NEURON:
                     #    self.neurons[i][j][k] = Output(type, threshold, position)
 
-    def connect(self, other, density=0.05):
+    def connect(self, other, density=0.05, connection_weights=(0.1, 0.05)):
         if not isinstance(density, float) or not 0.0 < density <= 1.0:
             raise NetworkExcetption("Network connection density must a positive float <= 1.0 ")
 
+        if not connection_weights[0] > 0 and not connection_weights[1] > 0:
+            raise NetworkExcetption("Network connection mean weight and stdev must be > 0")
+
+        mean_connection_weight, stdev_connection_weight = connection_weights
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
                 for k in range(self.shape[2]):
@@ -141,7 +130,7 @@ class Network:
                                 p = min(1.0, p)
                                 if np.random.ranf() < p:
                                     nu.add_downstream(nd)
-                                    weight = abs(self.stdev_weight * np.random.randn() + self.mean_weight)
+                                    weight = abs(stdev_connection_weight * np.random.randn() + mean_connection_weight)
                                     nd.add_upstream(nu, weight)
 
 
