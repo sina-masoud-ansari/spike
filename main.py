@@ -7,20 +7,20 @@ import matplotlib.animation as animation
 from network import *
 import operator
 
-scatter_marker_size = 20
+scatter_marker_size = 1
 
 def update(frame, inputs, main, outputs):
 
     network = inputs[0]
     points = inputs[1]
-    network.apply_random_input(np.random.rand(*network.shape))
-    network.update()
+    #network.apply_random_input(np.random.rand(*network.shape))
+    #network.update()
     points.set_array(network.get_values().flatten())
 
     network = main[0]
     points = main[1]
     lines = main[2]
-    network.update()
+    #network.update()
     points.set_array(network.get_values().flatten())
     flat = network.neurons.flatten()
     index = 0
@@ -40,7 +40,7 @@ def update(frame, inputs, main, outputs):
     network = outputs[0]
     points = outputs[1]
     lines = outputs[2]
-    network.update()
+    #network.update()
     points.set_array(network.get_values().flatten())
     flat = network.neurons.flatten()
     index = 0
@@ -55,17 +55,23 @@ def update(frame, inputs, main, outputs):
                 lines[index].set_color('c')
             index = index + 1
 
+    inputs[0].apply_random_input(np.random.rand(*inputs[0].shape))
+    inputs[0].update()
+    main[0].update()
+    outputs[0].update()
+
+
 def main():
 
     # init main network
-    main_network_shape = (5, 5, 5)
+    main_network_shape = (7, 7, 7)
     main_network_position = (0, 0, 0)
     main_network_spacing = (1, 1, 1)
-    main_network = Network(Network.STDP_NEURON, main_network_shape, main_network_position, main_network_spacing, memory_gradient=True, threshold=(0.6, 0.5), max_weight_association_delta=(0.05, 0.05), max_weight_decay_delta=(0.05, 0.05),  init_random_values=True)
+    main_network = Network(Network.STDP_NEURON, main_network_shape, main_network_position, main_network_spacing, memory_gradient=True, threshold=(0.7, 0.5), decay_rate=(0.7, 0.5), max_weight_association_delta=(0.05, 0.05), max_weight_decay_delta=(0.05, 0.05),  init_random_values=True)
     main_network.connect(main_network, density=0.2, connection_weights=(0.1, 0.05))
 
     # init input sensor network
-    sensor_network_shape = (1, 3, 3)
+    sensor_network_shape = (1, main_network_shape[1], main_network_shape[2])
     sensor_network_offset_x = -sensor_network_shape[0]
     #sensor_network_offset_y = -main_network_shape[1] * main_network_spacing[1]/2.0
     #sensor_network_offset_z = -main_network_shape[2] * main_network_spacing[2]/2.0
@@ -154,7 +160,7 @@ def main():
     inputs = [sensor_network, sensor_network_points]
     main = [main_network, main_network_points, main_network_lines]
     outputs = [output_network, output_network_points, output_network_lines]
-    ani = animation.FuncAnimation(fig, update, fargs=(inputs, main, outputs), interval=0)
+    ani = animation.FuncAnimation(fig, update, fargs=(inputs, main, outputs), interval=10)
     plt.show()
 
 if __name__ == "__main__":

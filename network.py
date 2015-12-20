@@ -15,7 +15,7 @@ class Network:
     SENSOR_NEURON = 1
     #OUTPUT_NEURON = 2
 
-    def __init__(self, type, shape, position, spacing, memory_gradient=False, ratio_inhibitory=0.5, threshold=(0.5, 0.5), max_weight_association_delta=(0.01, 0.01), max_weight_decay_delta=(0.04, 0.02), init_random_values=False):
+    def __init__(self, type, shape, position, spacing, memory_gradient=False, ratio_inhibitory=0.5, threshold=(0.5, 0.5), decay_rate=(0.5, 0.5), max_weight_association_delta=(0.01, 0.01), max_weight_decay_delta=(0.04, 0.02), init_random_values=False):
 
         self.type = type
         self.position = position
@@ -45,6 +45,11 @@ class Network:
             raise NetworkExcetption("Network threshold mean and stdev must be > 0")
         else:
             self.threshold = threshold
+
+        if not decay_rate[0] > 0 and decay_rate[1] > 0:
+            raise NetworkExcetption("Network decay rate mean and stdev must be > 0")
+        else:
+            self.decay_rate = decay_rate
 
         self.neurons = np.empty(self.shape, dtype=object)
         self.create_neurons()
@@ -77,6 +82,7 @@ class Network:
         x, y, z = self.position
         dx, dy, dz = self.spacing
         mean_threshold, stdev_threshold = self.threshold
+        mean_decay_rate, stdev_decay_rate = self.decay_rate
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
                 for k in range(self.shape[2]):
@@ -85,13 +91,14 @@ class Network:
                     else:
                         type = Neuron.E
                     threshold = abs(mean_threshold * np.random.randn() + stdev_threshold)
+                    decay_rate = abs(mean_decay_rate * np.random.randn() + stdev_decay_rate)
                     position = (x + i * dx, y + j * dy, z + k * dz)
                     if self.type == self.STDP_NEURON:
                         p = 1.0
                         if self.memory_gradient:
                             distance = np.linalg.norm(self.network_center - position)
                             #p = 1.0 - self.exp_pdf(distance) + 1e-6
-                            p = 1.0 - 1.0 / (distance * distance + 1e-6)
+                            p = 1.0 - 1.0 / (distance * distance * distance + 1e-6)
                             p = min(1.0, p)
                         # weight association - outer nodes are more adaptive
                         wad_mean, wad_stdev = self.max_weight_association_delta
@@ -99,7 +106,7 @@ class Network:
                         # weight decay - inner nodes preserve patterns for longer
                         wdd_mean, wdd_stdev = self.max_weight_decay_delta
                         wdd = (wdd_mean * p, wdd_stdev * p)
-                        self.neurons[i][j][k] = Neuron(type, threshold, position, weight_association_delta=wad, weight_decay_delta=wdd)
+                        self.neurons[i][j][k] = Neuron(type, threshold, decay_rate, position, weight_association_delta=wad, weight_decay_delta=wdd)
                     elif self.type == self.SENSOR_NEURON:
                         self.neurons[i][j][k] = Sensor(threshold, position)
                     #elif self.type == self.OUTPUT_NEURON:
@@ -126,7 +133,7 @@ class Network:
                                 nd_loc = np.asarray(nd.position, dtype=np.float)
                                 distance = np.linalg.norm(nd_loc - nu_loc)
                                 #p = self.exp_pdf(distance) * density
-                                p = density / (distance * distance + 1e-3)
+                                p = density / (distance * distance * distance + 1e-3)
                                 p = min(1.0, p)
                                 if np.random.ranf() < p:
                                     nu.add_downstream(nd)

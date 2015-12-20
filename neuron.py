@@ -6,18 +6,18 @@ class Neuron:
     I = -1.0 # Inhibitory
     E = 1.0 # Excitatory
     MIN_THRESHOLD = 1e-3
-    MIN_DECAY_RATE = 1e-1
+    MIN_DECAY_RATE = 1e-3
     MIN_WEIGHT_DELTA = 1e-3
 
-    def __init__(self, type, threshold, position, weight_association_delta=(0.01, 0.01), weight_decay_delta=(0.04, 0.02), decay_rate=(0.5, 0.5)):
+    def __init__(self, type, threshold, decay_rate, position, weight_association_delta=(0.01, 0.01), weight_decay_delta=(0.04, 0.02)):
 
         self.type = type;
         self.threshold = max(Neuron.MIN_THRESHOLD, threshold)
+        self.decay_rate = max(Neuron.MIN_DECAY_RATE, decay_rate)
         self.position = position # tuple (x, y, z)
         self.weight_association_delta = max(Neuron.MIN_WEIGHT_DELTA, weight_association_delta[1] * np.random.randn() + weight_association_delta[0])
-        #self.weight_decay_delta = max(Neuron.MIN_WEIGHT_DELTA, weight_decay_delta[1] * np.random.randn() + weight_decay_delta[0])
-        self.weight_decay_delta = self.weight_association_delta
-        self.decay_rate = max(Neuron.MIN_DECAY_RATE, decay_rate[1] * np.random.randn() + decay_rate[0])
+        self.weight_decay_delta = max(Neuron.MIN_WEIGHT_DELTA, weight_decay_delta[1] * np.random.randn() + weight_decay_delta[0])
+        #self.weight_decay_delta = self.weight_association_delta
         self.value = 0
         self.fired = False
         self.delta = 0
