@@ -55,7 +55,7 @@ class Neuron:
         for neuron in self.upstream:
             weight = self.upstream[neuron]
             if neuron in self.actors:
-                weight = min(1.0, weight + self.weight_association_delta)
+                weight = min(0.9, weight + self.weight_association_delta)
             else:
                 weight = max(1e-6, weight - self.weight_decay_delta)
             self.upstream[neuron] = weight

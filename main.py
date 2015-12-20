@@ -7,7 +7,7 @@ import matplotlib.animation as animation
 from network import *
 import operator
 
-scatter_marker_size = 100
+scatter_marker_size = 20
 
 def update(frame, inputs, main, outputs):
 
@@ -58,36 +58,36 @@ def update(frame, inputs, main, outputs):
 def main():
 
     # init main network
-    main_network_shape = (3, 6, 3)
+    main_network_shape = (4, 4, 4)
     main_network_position = (0, 0, 0)
-    main_network_spacing = (0.1, 0.1, 0.1)
-    main_network = Network(Network.STDP_NEURON, main_network_shape, main_network_position, main_network_spacing, init_random_values=True)
-    main_network.connect(main_network, density=0.03)
+    main_network_spacing = (1, 1, 1)
+    main_network = Network(Network.STDP_NEURON, main_network_shape, main_network_position, main_network_spacing, memory_gradient=True, max_weight_association_delta=(0.1, 0.1), max_weight_decay_delta=(0.1, 0.1), init_random_values=True)
+    main_network.connect(main_network, density=1.0)
 
     # init input sensor network
     sensor_network_shape = (1, 1, 1)
-    sensor_network_offset_x = -0.1
+    sensor_network_offset_x = -1.0
     #sensor_network_offset_y = -main_network_shape[1] * main_network_spacing[1]/2.0
     #sensor_network_offset_z = -main_network_shape[2] * main_network_spacing[2]/2.0
     sensor_network_offset_y = 0
     sensor_network_offset_z = 0
     sensor_network_position = tuple(map(operator.add, main_network_position, (sensor_network_offset_x, sensor_network_offset_y, sensor_network_offset_z)))
-    sensor_network_spacing = (0.1, 0.1, 0.1)
+    sensor_network_spacing = (1.0, 1.0, 1.0)
     sensor_network = Network(Network.SENSOR_NEURON, sensor_network_shape, sensor_network_position, sensor_network_spacing, init_random_values=True)
-    sensor_network.connect(main_network, density=0.02)
+    sensor_network.connect(main_network, density=1.0)
     
     # init output neuron network
     output_network_shape = (1, 1, 1)
-    output_network_offset_x = (main_network_shape[0] - 1) * main_network_spacing[0] + 0.1
+    output_network_offset_x = (main_network_shape[0] - 1) * main_network_spacing[0] + 1.0
     #output_network_offset_y = -main_network_shape[1] * main_network_spacing[1]/2.0
     #output_network_offset_z = -main_network_shape[2] * main_network_spacing[2]/2.0
     output_network_offset_y = 0
     output_network_offset_z = 0
     output_network_position = tuple(map(operator.add, main_network_position, (output_network_offset_x, output_network_offset_y, output_network_offset_z)))
-    output_network_spacing = (0.1, 0.1, 0.1)
+    output_network_spacing = (1, 1, 1)
     output_network = Network(Network.STDP_NEURON, output_network_shape, output_network_position, output_network_spacing, init_random_values=True, ratio_inhibitory=0)
-    output_network.connect(main_network, density=0.02)
-    main_network.connect(output_network, density=0.02)
+    output_network.connect(main_network, density=1.0)
+    main_network.connect(output_network, density=1.0)
 
     fig = plt.figure()
     network_view = fig.add_subplot(111, projection='3d')
@@ -131,7 +131,7 @@ def main():
         network_view.plot([nx, dx], [ny, dy], [nz, dz], color='red')
     """
 
-     # show output network connections
+    # show output network connections
     flat = output_network.neurons.flatten()
     output_network_lines = []
     for n in flat:
@@ -144,6 +144,8 @@ def main():
     main_network_points = network_view.scatter(main_network_x, main_network_y, main_network_z, s=scatter_marker_size, depthshade=True, cmap=cm.hot, vmin=0, vmax=1.0, marker='o', c=main_network.get_values().flatten())
     sensor_network_points = network_view.scatter(sensor_network_x, sensor_network_y, sensor_network_z, s=scatter_marker_size, depthshade=True, cmap=cm.hot, vmin=0, vmax=1.0, marker='^', c=sensor_network.get_values().flatten())
     output_network_points = network_view.scatter(output_network_x, output_network_y, output_network_z, s=scatter_marker_size, depthshade=True, cmap=cm.hot, vmin=0, vmax=1.0, marker='s', c=output_network.get_values().flatten())
+    network_center_point = network_view.scatter([main_network.network_center[0]], [main_network.network_center[1]], [main_network.network_center[2]], s=2*scatter_marker_size, cmap=cm.jet, vmin=0, vmax=1.0, c=[1.0])
+
 
     network_view.set_xlabel('X')
     network_view.set_ylabel('Y')

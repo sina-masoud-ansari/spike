@@ -15,13 +15,26 @@ class Network:
     SENSOR_NEURON = 1
     #OUTPUT_NEURON = 2
 
-    def __init__(self, type, shape, position, spacing, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.05, init_random_values=False):
+    def __init__(self, type, shape, position, spacing, memory_gradient=False, ratio_inhibitory=0.5, mean_threshold=0.5, stdev_threshold=0.5, mean_weight=0.1, stdev_weight=0.05, max_weight_association_delta=(0.01, 0.01), max_weight_decay_delta=(0.04, 0.02), init_random_values=False):
 
         self.type = type
         self.position = position
         self.spacing = spacing
         self.shape = shape
+        self.memory_gradient = memory_gradient
+        self.max_weight_association_delta = max_weight_association_delta
+        self.max_weight_decay_delta = max_weight_decay_delta
+
         self.size = shape[0] * shape[1] * shape[2]
+        self.network_center = np.asarray(self.position, dtype=float) + 0.5 * (np.asarray(self.shape, dtype=float) - 1)* np.asarray(self.spacing, dtype=float)
+
+        """
+        np_position = np.asarray(self.position)
+        np_shape = np.asarray(self.shape)
+        np_spacing = np.asarray(self.spacing)
+        np_distance = np.linalg.norm(np_shape * np_spacing)
+        self.max_distance = np.linalg.norm(np_distance)
+        """
 
         if ratio_inhibitory < 0:
             raise NetworkExcetption("Network ratio_inhibitory must be >= 0")
@@ -54,6 +67,19 @@ class Network:
         if init_random_values:
             self.random_activation()
 
+    # exponential probability density function
+    def exp_pdf(self, x):
+        if x > 0:
+            return np.exp(-x)
+        else :
+            return 0
+
+    def linear_normalised_pdf(self, x, d):
+        if x < 0 or x > d:
+            return 0
+        else:
+            return 1.0 - x/d
+
     def random_activation(self):
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
@@ -63,6 +89,7 @@ class Network:
 
 
     def create_neurons(self):
+        x, y, z = self.position
         dx, dy, dz = self.spacing
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
@@ -72,10 +99,20 @@ class Network:
                     else:
                         type = Neuron.E
                     threshold = abs(self.stdev_threshold * np.random.randn() + self.mean_threshold)
-                    x, y, z = self.position
+
                     position = (x + i * dx, y + j * dy, z + k * dz)
                     if self.type == self.STDP_NEURON:
-                        self.neurons[i][j][k] = Neuron(type, threshold, position)
+                        p = 1.0
+                        # weight association
+                        wad_mean, wad_stdev = self.max_weight_association_delta
+                        wad = (wad_mean * p, wad_stdev * p)
+                        if self.memory_gradient:
+                            distance = np.linalg.norm(self.network_center - position)
+                            p = 1.0 - self.exp_pdf(distance) + 1e-3
+                        # weight decay
+                        wdd_mean, wdd_stdev = self.max_weight_decay_delta
+                        wdd = (wdd_mean * p, wdd_stdev * p)
+                        self.neurons[i][j][k] = Neuron(type, threshold, position, weight_association_delta=wad, weight_decay_delta=wdd)
                     elif self.type == self.SENSOR_NEURON:
                         self.neurons[i][j][k] = Sensor(threshold, position)
                     #elif self.type == self.OUTPUT_NEURON:
@@ -97,12 +134,12 @@ class Network:
                                 nd = other.neurons[l][m][n]
                                 nd_loc = np.asarray(nd.position, dtype=np.float)
                                 distance = np.linalg.norm(nd_loc - nu_loc)
-                                if distance > 0:
-                                    fd = 1.0 / distance
-                                    if np.random.ranf() < density * fd:
-                                        nu.add_downstream(nd)
-                                        weight = abs(self.stdev_weight * np.random.randn() + self.mean_weight)
-                                        nd.add_upstream(nu, weight)
+                                p = self.exp_pdf(distance) * density
+                                if np.random.ranf() < p:
+                                    nu.add_downstream(nd)
+                                    weight = abs(self.stdev_weight * np.random.randn() + self.mean_weight)
+                                    nd.add_upstream(nu, weight)
+
 
     def update(self):
         # fire all potential neurons
